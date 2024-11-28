@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { Form, Container, Row, Col, Card, Button } from 'react-bootstrap';
+import 'bootstrap/dist/css/bootstrap.min.css';
 
-
-const homePage = () => {
+function HomePage(){
   const [formData, setFormData] = useState({
     age: '',
     gender: '',
@@ -257,4 +257,4 @@ const homePage = () => {
   );
 };
 
-export default homePage;
+export default HomePage;
