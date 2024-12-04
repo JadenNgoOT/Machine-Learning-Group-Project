@@ -74,6 +74,10 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'ml_app.wsgi.application'
 
+STATICFILES_DIRS = [
+    BASE_DIR / "base/static",
+]
+
 
 # Database
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
