@@ -1,70 +1,3 @@
-# #Change nomclature later idgaf
-# import numpy as np
-# import pandas as pd
-# from sklearn.preprocessing import LabelEncoder
-
-# import torch
-# from torch.utils.data import (
-#     DataLoader,
-#     TensorDataset,
-#     Dataset
-# )
-
-# df = pd.read_csv("./student_sleep_patterns.csv")
-
-# def make_dataset(df: pd.DataFrame) -> Dataset:
-#     # Instantiate LabelEncoder for each categorical column
-#     gender_encoder = LabelEncoder()
-#     year_encoder = LabelEncoder()
-    
-#     # Encode the 'Gender' and 'University_Year' columns
-#     df['Gender'] = gender_encoder.fit_transform(df['Gender'])
-#     df['University_Year'] = year_encoder.fit_transform(df['University_Year'])
-    
-#     # Extract features and target columns
-#     features = df[['Age', 'Gender', 'University_Year', 'Study_Hours', 'Screen_Time', 'Caffeine_Intake', 'Physical_Activity', 'Sleep_Duration']].values
-#     target = df['Sleep_Quality'].values
-    
-#     # Convert to tensors
-#     features_tensor = torch.tensor(features, dtype=torch.float32)
-#     target_tensor = torch.tensor(target, dtype=torch.int64)
-    
-#     # Return as TensorDataset
-#     return TensorDataset(features_tensor, target_tensor)
-
-    
-# # train_dataset = make_dataset(df)
-# # for i in range(5):  # Print the first 5 samples
-# #     features, target = train_dataset[i]
-# #     print(f"Sample {i}: Features: {features}, Target: {target}")
-
-# print(df)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 import numpy as np
 import pandas as pd
 from sklearn.preprocessing import LabelEncoder, StandardScaler
@@ -75,50 +8,57 @@ import torch.nn as nn
 import torch.optim as optim
 import torch.nn.functional as F
 from torchmetrics.classification import Accuracy
+import os
 
 # Load and preprocess data
-df = pd.read_csv("./student_sleep_patterns.csv")
+def load_and_preprocess_data(filepath):
+    df = pd.read_csv(filepath)
 
-# Drop weekend-related columns
-columns_to_drop = [col for col in df.columns if "Weekend" in col]
-df = df.drop(columns=columns_to_drop, errors='ignore')
+    # Drop weekend-related columns
+    columns_to_drop = [col for col in df.columns if "Weekend" in col]
+    df = df.drop(columns=columns_to_drop, errors='ignore')
 
-# Encode categorical data
-gender_encoder = LabelEncoder()
-year_encoder = LabelEncoder()
-df['Gender'] = gender_encoder.fit_transform(df['Gender'])
-df['University_Year'] = year_encoder.fit_transform(df['University_Year'])
+    # Encode categorical data
+    df['Gender'] = LabelEncoder().fit_transform(df['Gender'])
+    df['University_Year'] = LabelEncoder().fit_transform(df['University_Year'])
 
-# Extract features and target
-features = df[['Age', 'Gender', 'University_Year', 'Study_Hours', 'Screen_Time', 
-               'Caffeine_Intake', 'Physical_Activity', 'Sleep_Duration']].values
-target = df['Sleep_Quality'].values
+    # Extract features and target
+    features = df[['Age', 'Gender', 'University_Year', 'Study_Hours', 'Screen_Time', 
+                   'Caffeine_Intake', 'Physical_Activity', 'Sleep_Duration']].values
+    bins = [2, 4, 6, 8]
+    bin_ranges = [f"Class {i}: {bins[i-1]+1 if i > 0 else '1'}-{bins[i] if i < len(bins) else '10'}" for i in range(len(bins)+1)]
+    print("Class definitions:")
+    for bin_range in bin_ranges:
+        print(bin_range)  # Define bins for sleep quality classes
+    target = np.digitize(df['Sleep_Quality'].values, bins=bins)  # Create bins for 5 classes
+    
+    # Normalize features
+    features = StandardScaler().fit_transform(features)
 
-# Convert target to discrete classes (e.g., 1-3 -> 0, 4-7 -> 1, 8-10 -> 2)
-target = np.digitize(target, bins=[3, 7])  # Create bins for 3 classes
+    # Convert to tensors
+    features_tensor = torch.tensor(features, dtype=torch.float32)
+    target_tensor = torch.tensor(target, dtype=torch.long)
 
-# Normalize features
-scaler = StandardScaler()
-features = scaler.fit_transform(features)
-
-# Convert to tensors
-features_tensor = torch.tensor(features, dtype=torch.float32)
-target_tensor = torch.tensor(target, dtype=torch.long)  # Use long for classification
+    return features_tensor, target_tensor
 
 # Split into training and test sets
-X_train, X_test, y_train, y_test = train_test_split(features_tensor, target_tensor, test_size=0.2, random_state=42)
+def create_datasets(features, target, test_size=0.2, val_size=0.1, batch_size=16):
+    X_train, X_temp, y_train, y_temp = train_test_split(features, target, test_size=test_size + val_size, random_state=42)
+    X_val, X_test, y_val, y_test = train_test_split(X_temp, y_temp, test_size=test_size / (test_size + val_size), random_state=42)
 
-# Create TensorDatasets
-train_dataset = TensorDataset(X_train, y_train)
-test_dataset = TensorDataset(X_test, y_test)
+    train_dataset = TensorDataset(X_train, y_train)
+    val_dataset = TensorDataset(X_val, y_val)
+    test_dataset = TensorDataset(X_test, y_test)
 
-# DataLoaders
-train_loader = DataLoader(train_dataset, batch_size=16, shuffle=True)
-test_loader = DataLoader(test_dataset, batch_size=16)
+    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
+    val_loader = DataLoader(val_dataset, batch_size=batch_size)
+    test_loader = DataLoader(test_dataset, batch_size=batch_size)
+
+    return train_loader, val_loader, test_loader
 
 # Define Models for Classification
 class LinearClassifier(nn.Module):
-    def __init__(self, input_dim, num_classes=3):
+    def __init__(self, input_dim, num_classes=5):
         super(LinearClassifier, self).__init__()
         self.linear = nn.Linear(input_dim, num_classes)
     
@@ -126,11 +66,15 @@ class LinearClassifier(nn.Module):
         return self.linear(x)
 
 class MLPClassifier(nn.Module):
-    def __init__(self, input_dim, num_classes=3):
+    def __init__(self, input_dim, num_classes=5):
         super(MLPClassifier, self).__init__()
         self.model = nn.Sequential(
-            nn.Linear(input_dim, 128),
+            nn.Linear(input_dim, 256),
             nn.ReLU(),
+            nn.Dropout(0.3),
+            nn.Linear(256, 128),
+            nn.ReLU(),
+            nn.Dropout(0.3),
             nn.Linear(128, 64),
             nn.ReLU(),
             nn.Linear(64, num_classes)
@@ -140,7 +84,7 @@ class MLPClassifier(nn.Module):
         return self.model(x)
 
 class ConvClassifier(nn.Module):
-    def __init__(self, input_dim, num_classes=3):
+    def __init__(self, input_dim, num_classes=5):
         super(ConvClassifier, self).__init__()
         self.conv = nn.Sequential(
             nn.Conv1d(1, 16, kernel_size=3, padding=1),
@@ -157,80 +101,162 @@ class ConvClassifier(nn.Module):
         x = x.unsqueeze(1)  # Add channel dimension for Conv1d
         return self.conv(x)
 
-# Training Function with Accuracy Metric
-def train_model(model: nn.Module, optimizer: optim.Optimizer, dataloader: DataLoader, epochs: int):
-    accuracy_metric = Accuracy(task='multiclass', num_classes=3)
-    history = []  # To store loss and accuracy per epoch
+# Training Function with Validation
+def train_model(model, optimizer, train_loader, val_loader, epochs, state_file=None):
+    accuracy_metric = Accuracy(task='multiclass', num_classes=5)
+    history = []
 
     for epoch in range(epochs):
+        model.train()
         epoch_loss = 0
-        model.train()  # Set model to training mode
-        for batch_features, batch_target in dataloader:
-            optimizer.zero_grad()  # Zero gradients before backward pass
-            outputs = model(batch_features)  # Forward pass
-            loss = F.cross_entropy(outputs, batch_target)  # Calculate loss using CrossEntropy
-
-            loss.backward()  # Backward pass (compute gradients)
-            optimizer.step()  # Update model weights
-
-            epoch_loss += loss.item()  # Track loss for this epoch
-            accuracy_metric.update(outputs, batch_target)  # Update accuracy metric
-
-        # Calculate accuracy for this epoch
-        accuracy = accuracy_metric.compute()
-
-        metrics = {
-            'epoch': epoch + 1,
-            'loss': epoch_loss / len(dataloader),  # Average loss per batch in the epoch
-            'acc': accuracy.item()  # Accuracy in this epoch
-        }
-
-        # Print metrics at regular intervals
-        if (epoch + 1) % (epochs // 10) == 0 or epoch == epochs - 1:
-            print(f"Epoch {metrics['epoch']}/{epochs}: loss={metrics['loss']:.4f}, acc={metrics['acc']:.2f}")
-
-        history.append(metrics)  # Add metrics to the history list
-
-        # Reset accuracy metric for next epoch
         accuracy_metric.reset()
 
-    return pd.DataFrame(history)  # Return metrics in DataFrame format
+        for batch_features, batch_target in train_loader:
+            optimizer.zero_grad()
+            outputs = model(batch_features)
+            loss = F.cross_entropy(outputs, batch_target)
+
+            loss.backward()
+            optimizer.step()
+
+            epoch_loss += loss.item()
+            accuracy_metric.update(outputs, batch_target)
+
+        train_accuracy = accuracy_metric.compute().item()
+        val_loss, val_accuracy = evaluate_model(model, val_loader)
+
+        history.append({
+            'epoch': epoch + 1,
+            'train_loss': epoch_loss / len(train_loader),
+            'train_accuracy': train_accuracy,
+            'val_loss': val_loss,
+            'val_accuracy': val_accuracy
+        })
+
+        # Save state periodically
+        if state_file:
+            save_training_state(model, optimizer, epoch, history, state_file)
+
+        #print(f"Epoch {epoch + 1}: Train Loss: {epoch_loss / len(train_loader):.4f}, "f"Train Acc: {train_accuracy:.4f}, Val Loss: {val_loss:.4f}, Val Acc: {val_accuracy:.4f}")
+
+    return pd.DataFrame(history)
 
 # Evaluation Function
-def evaluate_model(model: nn.Module, test_loader: DataLoader):
-    model.eval()  # Set model to evaluation mode
-    accuracy_metric = Accuracy(task='multiclass', num_classes=3)
+def evaluate_model(model, data_loader):
+    model.eval()
+    accuracy_metric = Accuracy(task='multiclass', num_classes=5)
     test_loss = 0
-    all_preds = []
-    all_targets = []
 
-    with torch.no_grad():  # No need to compute gradients during evaluation
-        for batch_features, batch_target in test_loader:
-            outputs = model(batch_features)  # Forward pass
-            loss = F.cross_entropy(outputs, batch_target)  # Calculate loss
-            test_loss += loss.item()  # Track loss over all batches
+    with torch.no_grad():
+        for batch_features, batch_target in data_loader:
+            outputs = model(batch_features)
+            loss = F.cross_entropy(outputs, batch_target)
+            test_loss += loss.item()
+            accuracy_metric.update(outputs, batch_target)
 
-            accuracy_metric.update(outputs, batch_target)  # Update accuracy metric
+    avg_loss = test_loss / len(data_loader)
+    avg_acc = accuracy_metric.compute().item()
 
-            _, predicted = torch.max(outputs, 1)  # Get predicted class labels
-            all_preds.extend(predicted.numpy())
-            all_targets.extend(batch_target.numpy())
+    return avg_loss, avg_acc
 
-    # Calculate average loss and accuracy
-    avg_loss = test_loss / len(test_loader)
-    avg_acc = accuracy_metric.compute().item()  # Overall accuracy for the test set
+# Prediction Function
+def analyze_predictions(model, data_loader):
+    model.eval()
+    predictions, actuals = [], []
 
-    print(f"Test Loss: {avg_loss:.4f}, Test Accuracy: {avg_acc:.2f}%")
-    
-    return pd.DataFrame({
-        'loss': [avg_loss],
-        'accuracy': [avg_acc]
-    })
+    with torch.no_grad():
+        for batch_features, batch_target in data_loader:
+            outputs = model(batch_features)
+            predicted_classes = torch.argmax(outputs, dim=1)
+            predictions.extend(predicted_classes.cpu().numpy())
+            actuals.extend(batch_target.cpu().numpy())
 
-# Example usage:
-model = MLPClassifier(input_dim=features_tensor.shape[1])
-#model = LinearClassifier(input_dim=features_tensor.shape[1])
-# model = ConvClassifier(input_dim=features_tensor.shape[1])
-optimizer = optim.Adam(model.parameters(), lr=0.001)
-history_df = train_model(model, optimizer, train_loader, epochs=50)
-evaluation_df = evaluate_model(model, test_loader)
+    return pd.DataFrame({'Actual': actuals, 'Predicted': predictions})
+
+# Predict custom input
+def predict_custom_input(model, scaler, input_values):
+    input_values = scaler.transform([input_values])
+    input_tensor = torch.tensor(input_values, dtype=torch.float32)
+    model.eval()
+
+    with torch.no_grad():
+        output = model(input_tensor)
+        predicted_class = torch.argmax(output, dim=1).item()
+
+    return predicted_class
+
+# Save model state
+def save_model_state(model, filepath):
+    torch.save(model.state_dict(), filepath)
+
+# Load model state
+def load_model_state(model, filepath):
+    if os.path.exists(filepath):
+        model.load_state_dict(torch.load(filepath))
+        print(f"Model state loaded from {filepath}")
+    else:
+        print(f"No saved model state found at {filepath}")
+
+# Save training state
+def save_training_state(model, optimizer, epoch, history, filepath):
+    state = {
+        'model_state': model.state_dict(),
+        'optimizer_state': optimizer.state_dict(),
+        'epoch': epoch,
+        'history': history
+    }
+    torch.save(state, filepath)
+
+# Load training state
+def load_training_state(model, optimizer, filepath):
+    if os.path.exists(filepath):
+        state = torch.load(filepath)
+        model.load_state_dict(state['model_state'])
+        optimizer.load_state_dict(state['optimizer_state'])
+        print(f"Training state loaded from {filepath}. Starting from epoch {state['epoch'] + 1}.")
+        return state['epoch'], state['history']
+    else:
+        print(f"No saved training state found at {filepath}")
+        return 0, []
+
+# Example Usage
+if __name__ == "__main__":
+    filepath = "./student_sleep_patterns.csv"
+    model_path = "./mlp_classifier_state.pth"
+    state_path = "./training_state.pth"
+
+    # Load and preprocess data
+    features, target = load_and_preprocess_data(filepath)
+    train_loader, val_loader, test_loader = create_datasets(features, target)
+
+    # Initialize model and optimizer
+    input_dim = features.shape[1]
+    model = MLPClassifier(input_dim=input_dim, num_classes=5)
+    optimizer = optim.Adam(model.parameters(), lr=0.001)
+
+    # Load previous training state if available
+    start_epoch, training_history = load_training_state(model, optimizer, state_path)
+
+    # Train model
+    history = train_model(model, optimizer, train_loader, val_loader, epochs=100, state_file=state_path)
+
+    # Save model state
+    save_model_state(model, model_path)
+
+    # Evaluate model
+    test_loss, test_accuracy = evaluate_model(model, test_loader)
+    print(f"Test Loss: {test_loss:.4f}, Test Accuracy: {test_accuracy:.4f}")
+
+
+    # Analyze predictions
+    predictions_df = analyze_predictions(model, test_loader)
+    print(predictions_df.head())
+
+    # Predict custom input
+    scaler = StandardScaler()
+    scaler.fit(features.numpy())
+    # Example input (age, gender (1: male, 0: female), uni year(0-3), study in hours, screen time in hours, caffine in # of drinks, physical activity in min, sleep in hours)
+    sample_input = [22, 1, 3, 1, 8, 1, 120, 7]
+    prediction = predict_custom_input(model, scaler, sample_input)
+    print(f"Predicted Sleep Quality Class: {prediction}")
+
