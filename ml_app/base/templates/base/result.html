@@ -14,11 +14,7 @@
         <p>Study Hours: {{ sleep_data.Study_Hours }} hours</p>
         <p>Screen Time: {{ sleep_data.Screen_Time }} hours</p>
         <p>Caffeine Intake: {{ sleep_data.Caffeine_Intake }} mg</p>
-        <p>Physical Activity: {{ sleep_data.Physical_Activity }} hours</p>
-        <p>Weekday Sleep Start: {{ sleep_data.Weekday_Sleep_Start }}</p>
-        <p>Weekday Sleep End: {{ sleep_data.Weekday_Sleep_End }}</p>
-        <p>Weekend Sleep Start: {{ sleep_data.Weekend_Sleep_Start }}</p>
-        <p>Weekend Sleep End: {{ sleep_data.Weekend_Sleep_End }}</p>
+        <p>Physical Activity: {{ sleep_data.Physical_Activity }} minutes</p>
         <p>Predicted Sleep Quality: {{ sleep_data.Sleep_Quality|floatformat:2 }}</p>
         <a href="{% url 'home' %}" class="btn btn-primary">Make Another Prediction</a>
     </div>

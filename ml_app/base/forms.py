@@ -26,26 +26,10 @@ class SleepDataForm(forms.ModelForm):
             }),
             'Caffeine_Intake': forms.NumberInput(attrs={
                 'class': 'form-control rounded-pill',
-                'placeholder': 'Enter caffeine intake'
+                'placeholder': 'Enter number of drinks'
             }),
             'Physical_Activity': forms.NumberInput(attrs={
                 'class': 'form-control rounded-pill',
-                'placeholder': 'Enter physical activity hours'
-            }),
-            'Weekday_Sleep_Start': forms.TimeInput(attrs={
-                'class': 'form-control rounded-pill',
-                'type': 'time'
-            }),
-            'Weekday_Sleep_End': forms.TimeInput(attrs={
-                'class': 'form-control rounded-pill',
-                'type': 'time'
-            }),
-            'Weekend_Sleep_Start': forms.TimeInput(attrs={
-                'class': 'form-control rounded-pill',
-                'type': 'time'
-            }),
-            'Weekend_Sleep_End': forms.TimeInput(attrs={
-                'class': 'form-control rounded-pill',
-                'type': 'time'
+                'placeholder': 'Enter physical activity minutes'
             }),
         }
