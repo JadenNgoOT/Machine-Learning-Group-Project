@@ -5,9 +5,47 @@ class SleepDataForm(forms.ModelForm):
     class Meta:
         model = SleepData
         fields = ['University_Year', 'Sleep_Duration', 'Study_Hours', 'Screen_Time', 
-                  'Caffeine_Intake', 'Physical_Activity', 'Weekday_Sleep_Start', 'Weekend_Sleep_End']
+                 'Caffeine_Intake', 'Physical_Activity', 'Weekday_Sleep_Start', 
+                 'Weekday_Sleep_End', 'Weekend_Sleep_Start', 'Weekend_Sleep_End']
         widgets = {
-            'Weekday_Sleep_Start': forms.TimeInput(attrs={'type': 'time'}),
-            'Weekend_Sleep_End': forms.TimeInput(attrs={'type': 'time'}),
+            'University_Year': forms.NumberInput(attrs={
+                'class': 'form-control rounded-pill',
+                'placeholder': 'Enter your university year'
+            }),
+            'Sleep_Duration': forms.NumberInput(attrs={
+                'class': 'form-control rounded-pill',
+                'placeholder': 'Enter sleep duration'
+            }),
+            'Study_Hours': forms.NumberInput(attrs={
+                'class': 'form-control rounded-pill',
+                'placeholder': 'Enter study hours'
+            }),
+            'Screen_Time': forms.NumberInput(attrs={
+                'class': 'form-control rounded-pill',
+                'placeholder': 'Enter screen time'
+            }),
+            'Caffeine_Intake': forms.NumberInput(attrs={
+                'class': 'form-control rounded-pill',
+                'placeholder': 'Enter caffeine intake'
+            }),
+            'Physical_Activity': forms.NumberInput(attrs={
+                'class': 'form-control rounded-pill',
+                'placeholder': 'Enter physical activity hours'
+            }),
+            'Weekday_Sleep_Start': forms.TimeInput(attrs={
+                'class': 'form-control rounded-pill',
+                'type': 'time'
+            }),
+            'Weekday_Sleep_End': forms.TimeInput(attrs={
+                'class': 'form-control rounded-pill',
+                'type': 'time'
+            }),
+            'Weekend_Sleep_Start': forms.TimeInput(attrs={
+                'class': 'form-control rounded-pill',
+                'type': 'time'
+            }),
+            'Weekend_Sleep_End': forms.TimeInput(attrs={
+                'class': 'form-control rounded-pill',
+                'type': 'time'
+            }),
         }
-

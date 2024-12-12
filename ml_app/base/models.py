@@ -9,6 +9,8 @@ class SleepData(models.Model):
     Physical_Activity = models.FloatField()
     Sleep_Quality = models.FloatField(null=True, blank=True)
     Weekday_Sleep_Start = models.TimeField()
+    Weekday_Sleep_End = models.TimeField()
+    Weekend_Sleep_Start = models.TimeField()
     Weekend_Sleep_End = models.TimeField()
 
     def __str__(self):
