@@ -35,6 +35,7 @@ class GpaModel(nn.Module):
             nn.ReLU(),
             nn.Linear(12, 1)
         )
+        
 from torch.utils.data import Dataset
 class SleepDataset(Dataset):
     def __init__(self, features, targets):

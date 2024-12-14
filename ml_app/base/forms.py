@@ -1,13 +1,20 @@
 from django import forms
 from .models import SleepData
-
+from django.db import models
 class SleepDataForm(forms.ModelForm):
     class Meta:
         model = SleepData
         fields = ['University_Year', 'Sleep_Duration', 'Study_Hours', 'Screen_Time', 
-                 'Caffeine_Intake', 'Physical_Activity', 'Weekday_Sleep_Start', 
-                 'Weekday_Sleep_End', 'Weekend_Sleep_Start', 'Weekend_Sleep_End']
+                 'Caffeine_Intake', 'Physical_Activity', 'Age', 'Gender']
         widgets = {
+            'Age': forms.NumberInput(attrs={
+                'class': 'form-control rounded-pill',
+                'placeholder': 'Enter age'
+            }),
+            'Gender': forms.Select(attrs={
+                'class': 'form-control rounded-pill',
+                'placeholder': 'Select your Gender'
+            }),
             'University_Year': forms.NumberInput(attrs={
                 'class': 'form-control rounded-pill',
                 'placeholder': 'Enter your university year'

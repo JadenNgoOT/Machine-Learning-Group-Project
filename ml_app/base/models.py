@@ -1,6 +1,13 @@
 from django.db import models
 
 class SleepData(models.Model):
+    GENDER_CHOICES = [
+        ('male', 'Male'),
+        ('female', 'Female'),
+        ('other', 'Other'),
+    ]
+    Age = models.IntegerField()
+    Gender = models.CharField(max_length=10, choices=GENDER_CHOICES)
     University_Year = models.IntegerField()
     Sleep_Duration = models.FloatField()
     Study_Hours = models.FloatField()

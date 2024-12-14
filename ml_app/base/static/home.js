@@ -1,4 +1,4 @@
-function submit_info(data){
+async function submit_info(data){
     url = "/process-data/";
     try {
         fetch(url, {
@@ -15,7 +15,7 @@ function submit_info(data){
             if (data.status === '200'){
                 // debug message
                 console.log("Success");
-
+                console.log(data.prediction)
                 // handle return from api view
             } else {
                 console.error("Error");
@@ -24,6 +24,17 @@ function submit_info(data){
     } catch (error) {
         console.error("Error: ", error);
     }
+}
+
+function logFormValues() {
+    const form = document.getElementById('sleepForm');
+    const formData = new FormData(form);
+    const values = {};
+    formData.forEach((value, key) => {
+        values[key] = value;
+    });
+    // console.log(values);
+    submit_info(values);
 }
 
 // Helper function needed to make API calls.

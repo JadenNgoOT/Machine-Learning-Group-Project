@@ -9,7 +9,7 @@ import torch.optim as optim
 import torch.nn.functional as F
 from torchmetrics.classification import Accuracy
 import os
-
+import joblib
 # Load and preprocess data
 def load_and_preprocess_data(filepath):
     df = pd.read_csv(filepath)
@@ -33,8 +33,9 @@ def load_and_preprocess_data(filepath):
     target = np.digitize(df['Sleep_Quality'].values, bins=bins)  # Create bins for 5 classes
     
     # Normalize features
-    features = StandardScaler().fit_transform(features)
-
+    scaler = StandardScaler()
+    features = scaler.fit_transform(features)
+    joblib.dump(scaler, "scaler.pkl")
     # Convert to tensors
     features_tensor = torch.tensor(features, dtype=torch.float32)
     target_tensor = torch.tensor(target, dtype=torch.long)
@@ -219,6 +220,16 @@ def load_training_state(model, optimizer, filepath):
         print(f"No saved training state found at {filepath}")
         return 0, []
 
+def prediction_api(input_data):
+    model = MLPClassifier(input_dim=len(input_data), num_classes=5)
+    model.load_state_dict(torch.load('mlp_classifier_state.pth'))
+    model.eval()
+    
+    scaler = joblib.load("scaler.pkl")
+    prediction = predict_custom_input(model, scaler, input_data)
+    return prediction
+    
+    
 # Example Usage
 if __name__ == "__main__":
     filepath = "./student_sleep_patterns.csv"

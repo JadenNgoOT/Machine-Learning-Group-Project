@@ -77,8 +77,17 @@
     <div class="container">
         <div class="sleep-icon">💤</div>
         <h1 class="mb-4">Sleep Quality Patterns</h1>
-        <form method="post">
-            {% csrf_token %}
+        <form id="sleepForm" method="post">
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label for="{{ form.Age.id_for_label }}" class="form-label">Age</label>
+                    {{ form.Age }}
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label for="{{ form.Gender.id_for_label }}" class="form-label">Gender</label>
+                    {{ form.Gender }}
+                </div>
+            </div>
             <div class="row">
                 <div class="col-md-6 mb-3">
                     <label for="{{ form.University_Year.id_for_label }}" class="form-label">University Year</label>
@@ -110,7 +119,7 @@
                 </div>
             </div>
             <div class="text-center mt-4">
-                <button type="button" onclick="submit_info('msg')" class="btn btn-primary btn-lg">Predict Sleep Quality</button>
+                <button type="button" onclick="logFormValues()" class="btn btn-primary btn-lg">Predict Sleep Quality</button>
             </div>
         </form>
     </div>

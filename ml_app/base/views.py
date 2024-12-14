@@ -3,15 +3,19 @@ from .forms import SleepDataForm
 from .models import SleepData
 from django.http import JsonResponse
 import json
+from .ml_code.main import prediction_api
 
 def predict_sleep_quality(request):
     if request.method == 'POST':
         data = json.loads(request.body)
         data = data.get('data')
-        print(data)
-        return JsonResponse({"status" : "200"}, status=200)
+        prediction = prediction_api(data)
+        print(prediction)
+        return JsonResponse({"status" : "200",
+                             "prediction": prediction}, status=200)
+        
     # This is a debugging message... Feel free to remove during deployment.
-    print("Inside the predict_sleep_quality") 
+    # print("Inside the predict_sleep_quality") 
     
     return JsonResponse({"error" : "Invalid request"}, status=400)
 

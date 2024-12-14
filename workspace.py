@@ -91,8 +91,14 @@ def train(epochs=50):
         history.append(metrics)
         print(f"Epoch [{metrics['epoch']}/{epochs}], Loss: {metrics['loss']:.4f}, Accuracy: {metrics['acc']:.4f}, Val Loss: {metrics['val_loss']:.4f}, Val Acc: {metrics['val_acc']:.4f}")
         
-    torch.save(model.state_dict(), 'sleep_model.pth')
-    joblib.dump(scaler, 'scaler.pkl')  # Save the scaler
+    # UNCOMMENT THIS WHEN YOU'RE HAPPY WITH THE MODEL YOU'VE CREATED;
+    # Happy with the model means you are confident it works well
+    # Means it is not overfitting
+    # Means "good" accuracy and loss
+    
+    
+    # torch.save(model.state_dict(), 'sleep_model.pth')
+    # joblib.dump(scaler, 'scaler.pkl')  # Save the scaler
     return history
 
 def train_gpa(epochs=100):    
