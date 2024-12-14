@@ -1,50 +1,87 @@
-async function submit_info(data){
-    url = "/process-data/";
-    try {
-        fetch(url, {
-            method: 'POST',
-            headers: {
-                'Content-Type' : 'application/json',
-                'X-CSRFToken' : getCookie('csrftoken'),
-            },
-            body: JSON.stringify({
-                'data' : data,
-            })
-        }).then(response => response.json())
-        .then(data => {
-            if (data.status === '200'){
-                // debug message
-                console.log("Success");
-                console.log(data.prediction)
-                // handle return from api view
-            } else {
-                console.error("Error");
+function validateForm() {
+    const form = document.getElementById('sleepForm');
+    const inputs = form.querySelectorAll('input, select, textarea'); // Include all input types
+    let isValid = true;
+
+    inputs.forEach((input) => {
+        const errorSpan = input.nextElementSibling; // Assumes error span is next to the input
+        if (input.value.trim() === '') {
+            // Add error if missing
+            if (!errorSpan || !errorSpan.classList.contains('error-message')) {
+                const error = document.createElement('span');
+                error.className = 'error-message text-danger';
+                error.textContent = 'This field is required';
+                input.insertAdjacentElement('afterend', error);
             }
-        })
-    } catch (error) {
-        console.error("Error: ", error);
-    }
+            isValid = false;
+        } else {
+            // Remove existing error
+            if (errorSpan && errorSpan.classList.contains('error-message')) {
+                errorSpan.remove();
+            }
+        }
+    });
+
+    return isValid;
 }
 
-function logFormValues() {
+async function logFormValues() {
+    if (!validateForm()) {
+        console.log('Form validation failed.');
+        return; // Stop processing if the form is invalid
+    }
+
     const form = document.getElementById('sleepForm');
     const formData = new FormData(form);
     const values = {};
+
     formData.forEach((value, key) => {
         values[key] = value;
     });
-    // console.log(values);
-    submit_info(values);
+
+    console.log('Form values:', values); // Debugging output
+    await submit_info(values);
 }
 
-// Helper function needed to make API calls.
+async function submit_info(data) {
+    const url = '/process-data/';
+    const csrfToken = getCookie('csrftoken');
+    if (!csrfToken) {
+        console.error('CSRF token not found.');
+        return;
+    }
+
+    try {
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrfToken,
+            },
+            body: JSON.stringify({ data }),
+        });
+
+        const responseData = await response.json();
+
+        if (response.ok) {
+            console.log('Success:', responseData);
+            // Process response data (e.g., show prediction)
+        } else {
+            console.error('Error:', responseData);
+        }
+    } catch (error) {
+        console.error('Fetch error:', error);
+    }
+}
+
+// Helper function to get CSRF token
 function getCookie(name) {
     let cookieValue = null;
     if (document.cookie && document.cookie !== '') {
         const cookies = document.cookie.split(';');
         for (let i = 0; i < cookies.length; i++) {
             const cookie = cookies[i].trim();
-            if (cookie.substring(0, name.length + 1) === name + '=') {
+            if (cookie.startsWith(name + '=')) {
                 cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
                 break;
             }
