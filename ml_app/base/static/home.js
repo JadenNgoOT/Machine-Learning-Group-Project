@@ -1,23 +1,25 @@
 function validateForm() {
     const form = document.getElementById('sleepForm');
-    const inputs = form.querySelectorAll('input, select, textarea'); // Include all input types
+    const inputs = form.querySelectorAll('input, select');
     let isValid = true;
 
     inputs.forEach((input) => {
-        const errorSpan = input.nextElementSibling; // Assumes error span is next to the input
+        const errorSpan = input.nextElementSibling;
         if (input.value.trim() === '') {
-            // Add error if missing
-            if (!errorSpan || !errorSpan.classList.contains('error-message')) {
+            isValid = false;
+            if (errorSpan && errorSpan.classList.contains('error-message')) {
+                errorSpan.style.display = 'block';
+                errorSpan.textContent = 'This field is required';
+            } else {
                 const error = document.createElement('span');
                 error.className = 'error-message text-danger';
                 error.textContent = 'This field is required';
+                error.style.display = 'block';
                 input.insertAdjacentElement('afterend', error);
             }
-            isValid = false;
         } else {
-            // Remove existing error
             if (errorSpan && errorSpan.classList.contains('error-message')) {
-                errorSpan.remove();
+                errorSpan.style.display = 'none';
             }
         }
     });
@@ -26,21 +28,16 @@ function validateForm() {
 }
 
 async function logFormValues() {
-    if (!validateForm()) {
+    if (validateForm()) {
+        const form = document.getElementById('sleepForm');
+        const formData = new FormData(form);
+        const values = Object.fromEntries(formData.entries());
+
+        console.log('Form values:', values);
+        await submit_info(values);
+    } else {
         console.log('Form validation failed.');
-        return; // Stop processing if the form is invalid
     }
-
-    const form = document.getElementById('sleepForm');
-    const formData = new FormData(form);
-    const values = {};
-
-    formData.forEach((value, key) => {
-        values[key] = value;
-    });
-
-    console.log('Form values:', values); // Debugging output
-    await submit_info(values);
 }
 
 async function submit_info(data) {
@@ -74,7 +71,6 @@ async function submit_info(data) {
     }
 }
 
-// Helper function to get CSRF token
 function getCookie(name) {
     let cookieValue = null;
     if (document.cookie && document.cookie !== '') {
@@ -89,3 +85,12 @@ function getCookie(name) {
     }
     return cookieValue;
 }
+
+// Add event listener to the form submit button
+document.addEventListener('DOMContentLoaded', function() {
+    const submitButton = document.querySelector('button[type="button"]');
+    if (submitButton) {
+        submitButton.addEventListener('click', logFormValues);
+    }
+});
+
