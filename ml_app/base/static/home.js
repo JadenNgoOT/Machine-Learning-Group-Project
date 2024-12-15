@@ -62,6 +62,14 @@ async function submit_info(data) {
 
         if (response.ok) {
             console.log('Success:', responseData);
+            const prediction = responseData.prediction;
+
+            // Update the UI with the prediction
+            const predictionElement = document.getElementById('prediction-display');
+            if (predictionElement) {
+                predictionElement.textContent = `Predicted Sleep Quality: ${prediction}`;
+                predictionElement.style.display = 'block'; // Make sure it's visible
+            }
             // Process response data (e.g., show prediction)
         } else {
             console.error('Error:', responseData);
@@ -87,10 +95,10 @@ function getCookie(name) {
 }
 
 // Add event listener to the form submit button
-document.addEventListener('DOMContentLoaded', function() {
-    const submitButton = document.querySelector('button[type="button"]');
-    if (submitButton) {
-        submitButton.addEventListener('click', logFormValues);
-    }
-});
+// document.addEventListener('DOMContentLoaded', function() {
+//     const submitButton = document.querySelector('button[type="button"]');
+//     if (submitButton) {
+//         submitButton.addEventListener('click', logFormValues);
+//     }
+// });
 
