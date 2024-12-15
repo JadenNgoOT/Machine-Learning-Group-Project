@@ -9,10 +9,12 @@ def predict_sleep_quality(request):
     if request.method == 'POST':
         data = json.loads(request.body)
         data = data.get('data')
+        # print(data)
         prediction = prediction_api(data)
         print(prediction)
         return JsonResponse({"status" : "200",
-                             "prediction": prediction}, status=200)
+                            "prediction": prediction
+                            }, status=200)
         
     # This is a debugging message... Feel free to remove during deployment.
     # print("Inside the predict_sleep_quality") 

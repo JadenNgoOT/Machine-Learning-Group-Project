@@ -8,20 +8,32 @@ class LinearClassifier(nn.Module):
         return self.linear(x)
 
 class MLPClassifier(nn.Module):
-    def __init__(self, input_dim, num_classes=5):
+    def __init__(self, input_dim, num_classes):
         super(MLPClassifier, self).__init__()
+        
         self.model = nn.Sequential(
-            nn.Linear(input_dim, 256),
+            # Input layer
+            nn.Linear(input_dim, 512),
+            nn.BatchNorm1d(512),   # Batch Normalization
+            nn.ReLU(),             # Activation Function
+            nn.Dropout(0.5),       # Dropout for regularization
+            
+            # Hidden layer 1
+            nn.Linear(512, 256),
+            nn.BatchNorm1d(256),
             nn.ReLU(),
-            nn.Dropout(0.3),
+            nn.Dropout(0.5),
+            
+            # Hidden layer 2
             nn.Linear(256, 128),
+            nn.BatchNorm1d(128),
             nn.ReLU(),
-            nn.Dropout(0.3),
-            nn.Linear(128, 64),
-            nn.ReLU(),
-            nn.Linear(64, num_classes)
+            nn.Dropout(0.4),       # Slightly reduced dropout
+            
+            # Output layer
+            nn.Linear(128, num_classes)
         )
-    
+
     def forward(self, x):
         return self.model(x)
 

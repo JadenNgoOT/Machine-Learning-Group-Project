@@ -33,10 +33,10 @@ async function logFormValues() {
         const formData = new FormData(form);
         const values = Object.fromEntries(formData.entries());
 
-        console.log('Form values:', values);
+        // console.log('Form values:', values);
         await submit_info(values);
     } else {
-        console.log('Form validation failed.');
+        // console.log('Form validation failed.');
     }
 }
 
@@ -61,7 +61,7 @@ async function submit_info(data) {
         const responseData = await response.json();
 
         if (response.ok) {
-            console.log('Success:', responseData);
+            // console.log('Success:', responseData);
             const prediction = responseData.prediction;
 
             // Update the UI with the prediction
@@ -72,10 +72,10 @@ async function submit_info(data) {
             }
             // Process response data (e.g., show prediction)
         } else {
-            console.error('Error:', responseData);
+            // console.error('Error:', responseData);
         }
     } catch (error) {
-        console.error('Fetch error:', error);
+        // console.error('Fetch error:', error);
     }
 }
 
