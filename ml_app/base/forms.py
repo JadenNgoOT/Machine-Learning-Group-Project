@@ -4,39 +4,31 @@ from django.db import models
 class SleepDataForm(forms.ModelForm):
     class Meta:
         model = SleepData
-        fields = ['University_Year', 'Sleep_Duration', 'Study_Hours', 'Screen_Time', 
-                 'Caffeine_Intake', 'Physical_Activity', 'Age', 'Gender']
+        fields = ['Study_Hours_Per_Day', 'Extracurricular_Hours_Per_Day', 'Sleep_Hours_Per_Day', 
+                  'Social_Hours_Per_Day', 'Physical_Activity_Hours_Per_Day', 'GPA']
         widgets = {
-            'Age': forms.NumberInput(attrs={
+            'Study_Hours_Per_Day': forms.NumberInput(attrs={
                 'class': 'form-control rounded-pill',
-                'placeholder': 'Enter age'
+                'placeholder': 'Enter number of study hours per day'
             }),
-            'Gender': forms.Select(attrs={
+            'Extracurricular_Hours_Per_Day': forms.NumberInput(attrs={
                 'class': 'form-control rounded-pill',
-                'placeholder': 'Select your Gender'
+                'placeholder': 'Enter number of extracurricular hours per day'
             }),
-            'University_Year': forms.NumberInput(attrs={
+            'Sleep_Hours_Per_Day': forms.NumberInput(attrs={
                 'class': 'form-control rounded-pill',
-                'placeholder': 'Enter your university year'
+                'placeholder': 'Enter number of sleep hours per day'
             }),
-            'Sleep_Duration': forms.NumberInput(attrs={
+            'Social_Hours_Per_Day': forms.NumberInput(attrs={
                 'class': 'form-control rounded-pill',
-                'placeholder': 'Enter sleep duration'
+                'placeholder': 'Enter number of social hours per day'
             }),
-            'Study_Hours': forms.NumberInput(attrs={
+            'Physical_Activity_Hours_Per_Day': forms.NumberInput(attrs={
                 'class': 'form-control rounded-pill',
-                'placeholder': 'Enter study hours'
+                'placeholder': 'Enter number of physical activity hours per day'
             }),
-            'Screen_Time': forms.NumberInput(attrs={
+            'GPA': forms.NumberInput(attrs={
                 'class': 'form-control rounded-pill',
-                'placeholder': 'Enter screen time'
-            }),
-            'Caffeine_Intake': forms.NumberInput(attrs={
-                'class': 'form-control rounded-pill',
-                'placeholder': 'Enter number of drinks'
-            }),
-            'Physical_Activity': forms.NumberInput(attrs={
-                'class': 'form-control rounded-pill',
-                'placeholder': 'Enter physical activity minutes'
+                'placeholder': 'Enter GPA'
             }),
         }
