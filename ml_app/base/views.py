@@ -11,7 +11,7 @@ def predict_sleep_quality(request):
         data = data.get('data')
         # print(data)
         prediction = prediction_api(data)
-        print(prediction)
+        # print(prediction)
         return JsonResponse({"status" : "200",
                             "prediction": prediction
                             }, status=200)

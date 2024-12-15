@@ -2,6 +2,13 @@ from .ml_models import *
 import joblib
 import torch
 from django.conf import settings
+
+message_dict = {
+    0: "Low Stress! Keep stress-free!",
+    1: "Moderate Stress. Relax a bit.",
+    2: "High Stress Level! It's time for a break..."
+}
+
 def prediction_api(input_data: dict): 
     # input_data is a dictionary, so we transform it into an ordered array to feed it into the model
     model_path = settings.BASE_DIR / "base" / "ml_code"
@@ -13,7 +20,7 @@ def prediction_api(input_data: dict):
     
     scaler = joblib.load(model_path/"scaler.pkl")
     prediction = predict_custom_input(model, scaler, data)
-    return prediction
+    return message_dict[prediction]
 
 def predict_custom_input(model, scaler, input_values):
     input_values = scaler.transform([input_values])
