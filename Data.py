@@ -10,32 +10,35 @@ import torch.nn.functional as F
 from torchmetrics.classification import Accuracy
 import os
 import joblib
+import matplotlib.pyplot as plt
+from sklearn.utils import class_weight
+
+
+#---Data Stuffs---
 # Load and preprocess data
 def load_and_preprocess_data(filepath):
     df = pd.read_csv(filepath)
 
-    # Drop weekend-related columns
-    columns_to_drop = [col for col in df.columns if "Weekend" in col]
+    # Drop specified columns
+    columns_to_drop = ['Student_ID']
     df = df.drop(columns=columns_to_drop, errors='ignore')
 
-    # Encode categorical data
-    df['Gender'] = LabelEncoder().fit_transform(df['Gender'])
-    df['University_Year'] = LabelEncoder().fit_transform(df['University_Year'])
+    # Explicitly map Stress_Level to numerical values: 0 for 'low', 1 for 'moderate', 2 for 'high'
+    stress_level_mapping = {'High': 0, 'Moderate': 1, 'Low': 2}
+    df['Stress_Level'] = df['Stress_Level'].map(stress_level_mapping)
 
-    # Extract features and target
-    features = df[['Age', 'Gender', 'University_Year', 'Study_Hours', 'Screen_Time', 
-                   'Caffeine_Intake', 'Physical_Activity', 'Sleep_Duration']].values
-    bins = [2, 4, 6, 8]
-    bin_ranges = [f"Class {i}: {bins[i-1]+1 if i > 0 else '1'}-{bins[i] if i < len(bins) else '10'}" for i in range(len(bins)+1)]
-    print("Class definitions:")
-    for bin_range in bin_ranges:
-        print(bin_range)  # Define bins for sleep quality classes
-    target = np.digitize(df['Sleep_Quality'].values, bins=bins)  # Create bins for 5 classes
-    
-    # Normalize features
-    scaler = StandardScaler()
-    features = scaler.fit_transform(features)
-    joblib.dump(scaler, "scaler.pkl")
+    # Print out the mapping of stress levels
+    print("Stress Level Classes Mapping:")
+    for label, class_name in stress_level_mapping.items():
+        print(f"Class {class_name}: {label}")
+
+    # Extract features and set Stress_Level as the target
+    features = df[['Study_Hours_Per_Day', 'Extracurricular_Hours_Per_Day', 'Sleep_Hours_Per_Day', 
+                   'Social_Hours_Per_Day', 'Physical_Activity_Hours_Per_Day', 'GPA']].values
+    target = df['Stress_Level'].values  # Stress_Level as the target
+
+
+
     # Convert to tensors
     features_tensor = torch.tensor(features, dtype=torch.float32)
     target_tensor = torch.tensor(target, dtype=torch.long)
@@ -43,7 +46,7 @@ def load_and_preprocess_data(filepath):
     return features_tensor, target_tensor
 
 # Split into training and test sets
-def create_datasets(features, target, test_size=0.2, val_size=0.1, batch_size=16):
+def create_datasets(features, target, test_size=0.3, val_size=0.1, batch_size=8):
     X_train, X_temp, y_train, y_temp = train_test_split(features, target, test_size=test_size + val_size, random_state=42)
     X_val, X_test, y_val, y_test = train_test_split(X_temp, y_temp, test_size=test_size / (test_size + val_size), random_state=42)
 
@@ -57,55 +60,47 @@ def create_datasets(features, target, test_size=0.2, val_size=0.1, batch_size=16
 
     return train_loader, val_loader, test_loader
 
-# Define Models for Classification
-class LinearClassifier(nn.Module):
-    def __init__(self, input_dim, num_classes=5):
-        super(LinearClassifier, self).__init__()
-        self.linear = nn.Linear(input_dim, num_classes)
-    
-    def forward(self, x):
-        return self.linear(x)
 
+
+#---Main Neural Network Functions---
+# Define MLP
 class MLPClassifier(nn.Module):
-    def __init__(self, input_dim, num_classes=5):
+    def __init__(self, input_dim, num_classes):
         super(MLPClassifier, self).__init__()
+        
         self.model = nn.Sequential(
-            nn.Linear(input_dim, 256),
+            # Input layer
+            nn.Linear(input_dim, 512),
+            nn.BatchNorm1d(512),   # Batch Normalization
+            nn.ReLU(),             # Activation Function
+            nn.Dropout(0.5),       # Dropout for regularization
+            
+            # Hidden layer 1
+            nn.Linear(512, 256),
+            nn.BatchNorm1d(256),
             nn.ReLU(),
-            nn.Dropout(0.3),
+            nn.Dropout(0.5),
+            
+            # Hidden layer 2
             nn.Linear(256, 128),
+            nn.BatchNorm1d(128),
             nn.ReLU(),
-            nn.Dropout(0.3),
-            nn.Linear(128, 64),
-            nn.ReLU(),
-            nn.Linear(64, num_classes)
-        )
-    
-    def forward(self, x):
-        return self.model(x)
-
-class ConvClassifier(nn.Module):
-    def __init__(self, input_dim, num_classes=5):
-        super(ConvClassifier, self).__init__()
-        self.conv = nn.Sequential(
-            nn.Conv1d(1, 16, kernel_size=3, padding=1),
-            nn.ReLU(),
-            nn.Conv1d(16, 32, kernel_size=3, padding=1),
-            nn.ReLU(),
-            nn.Flatten(),
-            nn.Linear(32 * input_dim, 128),
-            nn.ReLU(),
+            nn.Dropout(0.4),       # Slightly reduced dropout
+            
+            # Output layer
             nn.Linear(128, num_classes)
         )
-    
-    def forward(self, x):
-        x = x.unsqueeze(1)  # Add channel dimension for Conv1d
-        return self.conv(x)
 
-# Training Function with Validation
-def train_model(model, optimizer, train_loader, val_loader, epochs, state_file=None):
-    accuracy_metric = Accuracy(task='multiclass', num_classes=5)
+    def forward(self, x):
+        return self.model(x)
+    
+# Early stopping and training with scheduler
+def train_model(model, optimizer, train_loader, val_loader, epochs, patience, state_file=None):
+    accuracy_metric = Accuracy(task='multiclass', num_classes=3)
+    scheduler = torch.optim.lr_scheduler.OneCycleLR(optimizer, max_lr=0.001, epochs=epochs, steps_per_epoch=len(train_loader))
     history = []
+    best_val_loss = float('inf')
+    patience_counter = 0
 
     for epoch in range(epochs):
         model.train()
@@ -126,6 +121,8 @@ def train_model(model, optimizer, train_loader, val_loader, epochs, state_file=N
         train_accuracy = accuracy_metric.compute().item()
         val_loss, val_accuracy = evaluate_model(model, val_loader)
 
+        scheduler.step(val_loss)
+
         history.append({
             'epoch': epoch + 1,
             'train_loss': epoch_loss / len(train_loader),
@@ -134,18 +131,31 @@ def train_model(model, optimizer, train_loader, val_loader, epochs, state_file=N
             'val_accuracy': val_accuracy
         })
 
-        # Save state periodically
+        print(f"Epoch {epoch + 1}: Train Loss: {epoch_loss / len(train_loader):.4f}, "
+              f"Train Acc: {train_accuracy:.4f}, Val Loss: {val_loss:.4f}, Val Acc: {val_accuracy:.4f}")
+
+        # Early stopping
+        if val_loss < best_val_loss:
+            best_val_loss = val_loss
+            patience_counter = 0
+            save_training_state(model, optimizer, epoch, history, state_file)
+        else:
+            patience_counter += 1
+
+        if patience_counter >= patience:
+            print("Early stopping triggered.")
+            break
+        
         if state_file:
             save_training_state(model, optimizer, epoch, history, state_file)
 
-        #print(f"Epoch {epoch + 1}: Train Loss: {epoch_loss / len(train_loader):.4f}, "f"Train Acc: {train_accuracy:.4f}, Val Loss: {val_loss:.4f}, Val Acc: {val_accuracy:.4f}")
-
     return pd.DataFrame(history)
+
 
 # Evaluation Function
 def evaluate_model(model, data_loader):
     model.eval()
-    accuracy_metric = Accuracy(task='multiclass', num_classes=5)
+    accuracy_metric = Accuracy(task='multiclass', num_classes=3)
     test_loss = 0
 
     with torch.no_grad():
@@ -159,6 +169,7 @@ def evaluate_model(model, data_loader):
     avg_acc = accuracy_metric.compute().item()
 
     return avg_loss, avg_acc
+
 
 # Prediction Function
 def analyze_predictions(model, data_loader):
@@ -186,6 +197,9 @@ def predict_custom_input(model, scaler, input_values):
 
     return predicted_class
 
+
+
+#---Saving the neural network for better training---
 # Save model state
 def save_model_state(model, filepath):
     torch.save(model.state_dict(), filepath)
@@ -220,44 +234,87 @@ def load_training_state(model, optimizer, filepath):
         print(f"No saved training state found at {filepath}")
         return 0, []
 
-def prediction_api(input_data):
-    model = MLPClassifier(input_dim=len(input_data), num_classes=5)
-    model.load_state_dict(torch.load('mlp_classifier_state.pth'))
+
+
+#Plotting the prediction of the model(line) vs the actual class value(points)
+def plot_predictions_vs_actuals(model, data_loader):
+    """
+    Plots the model's predictions against the actual target values, with predictions on a line
+    and targets as points.
+
+    Parameters:
+    - model: Trained PyTorch model
+    - data_loader: DataLoader containing the dataset to evaluate
+
+    Returns:
+    - None
+    """
     model.eval()
+    predictions = []
+    actuals = []
+
+    # Collect predictions and actual values
+    with torch.no_grad():
+        for batch_features, batch_target in data_loader:
+            outputs = model(batch_features)
+            predicted_classes = torch.argmax(outputs, dim=1)
+            predictions.extend(predicted_classes.cpu().numpy())
+            actuals.extend(batch_target.cpu().numpy())
+
+    # Convert to numpy arrays for visualization
+    predictions = np.array(predictions)
+    actuals = np.array(actuals)
+
+    # Sort actuals and predictions for better visualization
+    sorted_indices = np.argsort(actuals)
+    actuals_sorted = actuals[sorted_indices]
+    predictions_sorted = predictions[sorted_indices]
+
+    # Plot predictions as a line and actuals as points
+    plt.figure(figsize=(10, 6))
+    plt.plot(range(len(predictions_sorted)), predictions_sorted, label="Predictions", color="blue", linestyle="-", linewidth=2)
+    plt.scatter(range(len(actuals_sorted)), actuals_sorted, label="Actual Values", color="red", edgecolor="k", s=50)
     
-    scaler = joblib.load("scaler.pkl")
-    prediction = predict_custom_input(model, scaler, input_data)
-    return prediction
+    plt.xlabel("Data Points (sorted by Actual Values)")
+    plt.ylabel("Sleep Quality Class")
+    plt.title("Model Predictions vs Actual Values")
+    plt.xticks([])  # Remove x-ticks for cleaner visualization
+    plt.yticks(ticks=range(3), labels=[f"Class {i}" for i in range(3)])
+    plt.grid(alpha=0.3)
+    plt.legend()
+    plt.show()
+    
+    
     
     
 # Example Usage
 if __name__ == "__main__":
-    filepath = "./student_sleep_patterns.csv"
-    model_path = "./mlp_classifier_state.pth"
-    state_path = "./training_state.pth"
+    filepath = "student_lifestyle_dataset.csv"
+    model_path = "ml_app/base/ml_code/mlp_classifier_state.pth"
+    state_path = "ml_app/base/ml_code/training_state.pth"
 
     # Load and preprocess data
     features, target = load_and_preprocess_data(filepath)
     train_loader, val_loader, test_loader = create_datasets(features, target)
 
-    # Initialize model and optimizer
+    # Initialize model, optimizer, and loss
     input_dim = features.shape[1]
-    model = MLPClassifier(input_dim=input_dim, num_classes=5)
-    optimizer = optim.Adam(model.parameters(), lr=0.001)
+    model = MLPClassifier(input_dim=input_dim, num_classes=3)
+    optimizer = optim.AdamW(model.parameters(), lr=0.001, weight_decay=1e-5)
 
     # Load previous training state if available
     start_epoch, training_history = load_training_state(model, optimizer, state_path)
 
-    # Train model
-    history = train_model(model, optimizer, train_loader, val_loader, epochs=100, state_file=state_path)
+    # Train model with early stopping
+    history = train_model(model, optimizer, train_loader, val_loader, epochs=1000, patience=5, state_file=model_path)
 
     # Save model state
     save_model_state(model, model_path)
 
     # Evaluate model
+    model.load_state_dict(torch.load(model_path))
     test_loss, test_accuracy = evaluate_model(model, test_loader)
     print(f"Test Loss: {test_loss:.4f}, Test Accuracy: {test_accuracy:.4f}")
-
 
     # Analyze predictions
     predictions_df = analyze_predictions(model, test_loader)
@@ -266,8 +323,9 @@ if __name__ == "__main__":
     # Predict custom input
     scaler = StandardScaler()
     scaler.fit(features.numpy())
-    # Example input (age, gender (1: male, 0: female), uni year(0-3), study in hours, screen time in hours, caffine in # of drinks, physical activity in min, sleep in hours)
-    sample_input = [22, 1, 3, 1, 8, 1, 120, 7]
+    # Example input (studying in hour, extracurricular in hours, sleep in hours, socializing in hours, physical activity in hours, GPA)
+    sample_input = [5.3,3.5,8,4.2,3,2.75]
     prediction = predict_custom_input(model, scaler, sample_input)
-    print(f"Predicted Sleep Quality Class: {prediction}")
+    print(f"Predicted Stress Class: {prediction}")
 
+    plot_predictions_vs_actuals(model, test_loader)
