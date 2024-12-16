@@ -95,7 +95,7 @@ class MLPClassifier(nn.Module):
         return self.model(x)
     
 # Early stopping and training with scheduler
-def train_model(model, optimizer, train_loader, val_loader, epochs, patience, state_file=None):
+def train_model(model, optimizer, train_loader, val_loader, epochs, patience, state_file):
     accuracy_metric = Accuracy(task='multiclass', num_classes=3)
     scheduler = torch.optim.lr_scheduler.OneCycleLR(optimizer, max_lr=0.001, epochs=epochs, steps_per_epoch=len(train_loader))
     history = []
@@ -304,7 +304,7 @@ if __name__ == "__main__":
     start_epoch, training_history = load_training_state(model, optimizer, state_path)
 
     # Train model with early stopping
-    history = train_model(model, optimizer, train_loader, val_loader, epochs=1000, patience=5, state_file=model_path)
+    history = train_model(model, optimizer, train_loader, val_loader, epochs=1000, patience=5, state_file=state_path)
 
     # Save model state
     save_model_state(model, model_path)
