@@ -144,10 +144,8 @@ def train_model(model, optimizer, train_loader, val_loader, epochs, patience, st
 
         if patience_counter >= patience:
             print("Early stopping triggered.")
-            break
-        
-        if state_file:
             save_training_state(model, optimizer, epoch, history, state_file)
+            break
 
     return pd.DataFrame(history)
 
